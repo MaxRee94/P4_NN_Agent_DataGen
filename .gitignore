@@ -1,0 +1,5 @@
+
+description.rtf
+*.pyc
+preprocessed.json
+models/
