@@ -18,7 +18,7 @@ from mcts_agent import Agent as MCTSAgent
 from score_agent import Agent as ScoreAgent
 
 
-split_threshold = 1000
+split_threshold = 30
 agents = [
     {"cls": RandomAgent, "args": []},
     {"cls": BanditAgent, "args": [10]},
@@ -41,6 +41,23 @@ def get_agent_randomly(id=None):
 
 
 def main(args):
+    if args.split_games and args.games > split_threshold:
+        total_games = args.games
+        args.games = split_threshold
+
+        finished_games = 0
+        while total_games >= split_threshold:
+            _main(args)
+            total_games -= split_threshold
+            finished_games += split_threshold
+            print("Finished running", finished_games, "games.")
+
+        args.games = total_games
+
+    _main(args)
+
+
+def _main(args):
     if args.input:
         data = read_games(args.input)
         # call some function to do your preprocessing and training here
@@ -53,7 +70,7 @@ def main(args):
     work = []
     for i in range(args.games):
         if i % 10 == 0:
-            print("running game", i, "/", args.games, "...")
+            print("adding game", i, "/", args.games, "...")
         if args.output:
             hero = get_agent_randomly(id=1)
         else:
@@ -72,6 +89,7 @@ def main(args):
                     args.output,
                     args.print_board))
 
+    print("\nrunning", len(work), "games...")
     start = time.perf_counter()
     # the tests can be run in parallel, or sequentially
     # it is recommended to only use the parallel version for large-scale testing
@@ -196,6 +214,8 @@ if __name__ == '__main__':
         'should contain a rectangle with x on positions that should be '
         'occupied, and dots on other positions. Separate objective shapes '
         'should be separated by a blank line.')
+
+    parser.add_argument('--split_games', action="store_true")
 
     args = parser.parse_args()
     #cProfile.run('main(args)')
