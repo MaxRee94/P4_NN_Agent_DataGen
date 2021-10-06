@@ -1,5 +1,3 @@
-# Put your name and student ID here before submitting!
-# Name (ID)
 import copy
 import random
 
@@ -13,11 +11,11 @@ import tensorflow as tf
 class NNAgent:
     def __init__(self, id):
         self.id = id
-        self.model = tf.keras.models.load_model('nn1_model_3')
+        self.model = tf.keras.models.load_model(r'E:\Documents\AI_for_Game_Technology\class_assignments\P3_NN_1_Agent\models\nn_model_v489.ckpt\nn_model.ckpt')
 
     def make_move(self, game):
         board_free_positions = game.board.free_positions()
-        one_hot_encoded_free_positions = np.zeros((len(board_free_positions), 75), dtype=int)
+        one_hot_encoded_free_positions = np.zeros((len(board_free_positions), 77), dtype=int)
         board_counter = 0
 
         for move in board_free_positions:
@@ -34,6 +32,8 @@ class NNAgent:
                         one_hot_encoded_free_positions[board_counter, one_hot_base_index + 2] = 1
                     else:
                         one_hot_encoded_free_positions[board_counter, one_hot_base_index + 1] = 1
+
+            one_hot_encoded_free_positions[board_counter, -2] = 1
 
             board_counter += 1
 

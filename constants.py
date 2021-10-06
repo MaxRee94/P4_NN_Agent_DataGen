@@ -63,7 +63,7 @@ trials = [
     'blueprint': [
         {'width': 75, 'activation': None}, {'width': 200, 'activation': 'relu'}, {'width': 50, 'activation': 'relu'}, {'width': 3, 'activation': 'relu'}
     ],
-    'training_settings': {'epochs': 50, "batch_size": 32},
+    'training_settings': {'epochs': 8, "batch_size": 256},
     'learnrate': None
     }
 ]

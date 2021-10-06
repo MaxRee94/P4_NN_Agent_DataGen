@@ -1,14 +1,20 @@
 #! /usr/bin/env -S python -u
-from game import Game
-from board import Board
-from random_agent import RandomAgent
-from neural_network_agent import NNAgent
-
+import random
 import argparse, time, cProfile
 import numpy as np
 import multiprocessing as mp
 from collections import Counter
 from itertools import starmap
+
+from game import Game
+from board import Board
+from random_agent import RandomAgent
+from neural_network_agent import NNAgent
+from neural_network_agent_dimitris import NNAgent as DimitrisNNAgent
+
+from bandit_agent import BanditAgent
+from mcts_agent import Agent as MCTSAgent
+from score_agent import Agent as ScoreAgent
 
 
 def main(args):
@@ -16,21 +22,30 @@ def main(args):
         data = read_games(args.input)
         # call some function to do your preprocessing and training here
 
-    work = []
     for i in range(args.games):
-        # swap order every game
-        if i % 2 == 0:
-            players = [NNAgent(1), RandomAgent(2)]
-        else:
-            players = [RandomAgent(2), NNAgent(1)]
+        work = []
+        opponents = [
+            RandomAgent(2),
+            BanditAgent(10, 2),
+            BanditAgent(100, 2),
+            BanditAgent(200, 2),
+            MCTSAgent(250, 2),
+            ScoreAgent(2)
+        ]
+        for opponent in opponents:
+            if args.output:
+                agent = random.choice(opponents + [DimitrisNNAgent(2)])
+                agent.id = 1
+            else:
+                agent = NNAgent(1)
+            # swap order every game
+            if i % 2 == 0:
+                players = [agent, opponent]
+            else:
+                players = [opponent, agent]
 
-        work.append((args.size,
-                     read_objectives(args.objectives),
-                     players,
-                     args.output,
-                     args.print_board))
-
-    start = time.perf_counter()
+            work.append((args.size,
+                         read_objectives(args.objectives),
 
     # the tests can be run in parallel, or sequentially
     # it is recommended to only use the parallel version for large-scale testing
