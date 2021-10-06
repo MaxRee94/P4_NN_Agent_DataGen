@@ -4,6 +4,7 @@ import argparse, time, cProfile
 import numpy as np
 import multiprocessing as mp
 from collections import Counter
+import copy
 from itertools import starmap
 
 from game import Game
@@ -17,36 +18,61 @@ from mcts_agent import Agent as MCTSAgent
 from score_agent import Agent as ScoreAgent
 
 
+split_threshold = 1000
+agents = [
+    {"cls": RandomAgent, "args": []},
+    {"cls": BanditAgent, "args": [10]},
+    {"cls": BanditAgent, "args": [100]},
+    {"cls": BanditAgent, "args": [200]},
+    {"cls": MCTSAgent, "args": [250]},
+    {"cls": DimitrisNNAgent, "args": []},
+    {"cls": ScoreAgent, "args": []}
+]
+
+
+def get_agent_randomly(id=None):
+    assert id, "Pass an id to the 'get agent randomly' function"
+    agent_config = random.choice(agents)
+    agent_cls = agent_config["cls"]
+    args = agent_config["args"] + [id]
+    agent = agent_cls(*args)
+
+    return agent
+
+
 def main(args):
     if args.input:
         data = read_games(args.input)
         # call some function to do your preprocessing and training here
 
+    split_task = args.games > split_threshold
+    if split_task:
+        original_amount = args.games
+        args.games = split_threshold
+
+    work = []
     for i in range(args.games):
-        work = []
-        opponents = [
-            RandomAgent(2),
-            BanditAgent(10, 2),
-            BanditAgent(100, 2),
-            BanditAgent(200, 2),
-            MCTSAgent(250, 2),
-            ScoreAgent(2)
-        ]
-        for opponent in opponents:
-            if args.output:
-                agent = random.choice(opponents + [DimitrisNNAgent(2)])
-                agent.id = 1
-            else:
-                agent = NNAgent(1)
-            # swap order every game
-            if i % 2 == 0:
-                players = [agent, opponent]
-            else:
-                players = [opponent, agent]
+        if i % 10 == 0:
+            print("running game", i, "/", args.games, "...")
+        if args.output:
+            hero = get_agent_randomly(id=1)
+        else:
+            hero = NNAgent(1)
 
-            work.append((args.size,
-                         read_objectives(args.objectives),
+        opponent = get_agent_randomly(id=2)
+        # swap order every game
+        if i % 2 == 0:
+            players = [hero, opponent]
+        else:
+            players = [opponent, hero]
 
+        work.append((args.size,
+                    read_objectives(args.objectives),
+                    players,
+                    args.output,
+                    args.print_board))
+
+    start = time.perf_counter()
     # the tests can be run in parallel, or sequentially
     # it is recommended to only use the parallel version for large-scale testing
     # of your agent, as it is harder to debug your program when enabled
@@ -65,11 +91,15 @@ def main(args):
     print(f'Total score {stats[1]}/{stats[2]}/{stats[0]}.')
     print(f'Total time {end - start} seconds.')
 
+    if split_task:
+        args.games = original_amount - split_threshold
+        main(args)
+
 def play_game(boardsize, objectives, players, output, print_board = None):
     game = Game.new(boardsize, objectives, players, print_board == 'all')
 
     if output:
-        with open(output, 'a') as outfile:
+        with open(output, 'a+') as outfile:
             print(boardsize, file = outfile)
             winner = game.play(outfile)
             print(f'winner={winner.id if winner else 0}', file = outfile)
